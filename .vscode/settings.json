@@ -1,0 +1,10 @@
+{
+    "Lua.diagnostics.globals": [
+        "gui",
+        "game",
+        "_"
+    ],
+    "Lua.diagnostics.disable": [
+        "unused-function"
+    ]
+}

@@ -1,0 +1,74 @@
+local func = require "fbridge/func"
+local coor = require "fbridge/coor"
+local pipe = require "fbridge/pipe"
+-- local dump = require "luadump"
+
+local math = math
+local pi = math.pi
+local abs = math.abs
+local table = table
+local unpack = table.unpack
+local insert = table.insert
+
+function data()
+    return {
+        type = "STREET_CONSTRUCTION",
+        description = {
+            name = _("MENU_NAME"),
+            description = _("MENU_DESC")
+        },
+        availability = {
+            yearFrom = 1800,
+            yearTo = 1800
+        },
+        order = 2000,
+        params = {},
+        updateFn = function(params)
+            local result = {
+                edgeLists = {},
+                models = {{
+                    id = "asset/icon/marker_exclamation.mdl",
+                    transf = coor.I(),
+                }},
+                groundFaces = {},
+                edgeObjects = {},
+                terrainAlignmentLists = {{
+                    type = "EQUAL",
+                    faces = {}
+                }}
+            }
+
+            result.edgeLists = func.map(params.edges, function(e)
+                return
+                    e.isTrack and
+                    {
+                        type = "TRACK",
+                        edgeType = "BRIDGE",
+                        edgeTypeName = params.bridge .. ".lua",
+                        alignTerrain = false,
+                        params = {
+                            type = ({"high_speed.lua", "standard.lua"})[e.trackType],
+                            catenary = e.catenary,
+                        },
+                        edges = e.edge,
+                        snapNodes = e.snap0 and e.snap1 and {0, 1} or e.snap0 and {0} or e.snap1 and {1} or {},
+                        freeNodes = params.isFinal and {0, 1} or {},
+                    }
+                    or {
+                        type = "STREET",
+                        edgeType = "BRIDGE",
+                        edgeTypeName = params.bridge .. ".lua",
+                        alignTerrain = false,
+                        params = {
+                            type = e.street,
+                            tramTrackType = e.tram and "ELECTRIC" or "NO",
+                        },
+                        edges = e.edge,
+                        snapNodes = e.snap0 and e.snap1 and {0, 1} or e.snap0 and {0} or e.snap1 and {1} or {},
+                        freeNodes = params.isFinal and {0, 1} or {},
+                    }
+            end)
+            return result
+        end
+    }
+end
