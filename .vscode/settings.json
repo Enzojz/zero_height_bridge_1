@@ -2,7 +2,8 @@
     "Lua.diagnostics.globals": [
         "gui",
         "game",
-        "_"
+        "_",
+        "api"
     ],
     "Lua.diagnostics.disable": [
         "unused-function"

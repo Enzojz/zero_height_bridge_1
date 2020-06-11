@@ -80,22 +80,17 @@ local script = {
         if (id == "__edgeTool__" and param.sender ~= "fbridge") then
             if (name == "off") then
                 state.use = false
-            elseif (name == "init") then
-                state = func.with(state, param)
             end
         elseif (id == "__fbridge__") then
             if (name == "bridge") then
                 state.bridge = state.bridge < #state.bridgeList and state.bridge + 1 or 1
+            elseif (name == "init") then
+                state = func.with(state, param)
             elseif (name == "use") then
                 state.use = not state.use
             elseif (name == "build") then
                 local edges = table.unpack(param)
                 for i, edge in ipairs(edges) do
-                    if not edge.isTrack then
-                        local e = game.interface.getEntity(edge.id)
-                        edges[i].street = e.streetType
-                        edges[i].tram = e.hasTram
-                    end
                     game.interface.bulldoze(edge.id)
                 end
                 local id = game.interface.buildConstruction(
@@ -134,19 +129,14 @@ local script = {
         end
     end,
     guiInit = function()
-        local bridgeList = defBridgeList
-        
-        pcall(function()
-            local sList = {}
-            local file = io.open("fbridge.rec", "r+")
-            for line in file:lines() do
-                table.insert(sList, line)
+        local bridgeList = {}
+        for _, bridgeName in pairs(api.res.bridgeTypeRep.getAll()) do
+            local index = api.res.bridgeTypeRep.find(bridgeName)
+            if (api.res.bridgeTypeRep.isVisible(index)) then
+                table.insert(bridgeList, bridgeName:match("(.+).lua"))
             end
-            file:close()
-            if #sList > 0 then bridgeList = sList end
-        end)
-
-        game.interface.sendScriptEvent("__edgeTool__", "init", { bridgeList = bridgeList })
+        end
+        game.interface.sendScriptEvent("__fbridge__", "init", { bridgeList = bridgeList })
     end,
     guiUpdate = function()
         createComponents()
@@ -218,17 +208,21 @@ local script = {
                             }
                         }
                         local edgeType = seg.comp.type + 1
-                        local catenary = seg.params.catenary
-                        local trackType = seg.params.trackType == 0 and 1 or 2
-                        
                         table.insert(edges, {
                             id = seg.entity,
                             edge = edge,
                             edgeType = edgeType,
-                            catenary = catenary,
                             snap0 = snap0,
                             snap1 = snap1,
-                            trackType = trackType,
+                            track = isTrack and {
+                                trackType = api.res.trackTypeRep.getFileName(seg.trackEdge.trackType):match("([^/]+.lua)"),
+                                catenary = seg.trackEdge.catenary
+                            } or false,
+                            street = (not isTrack) and {
+                                streetType = api.res.streetTypeRep.getFileName(seg.streetEdge.streetType):match("res/config/street/(.+.lua)"),
+                                hasBus = seg.streetEdge.hasBus,
+                                tramTrackType = seg.streetEdge.tramTrackType,
+                            } or false,
                             isTrack = isTrack
                         })
                     end

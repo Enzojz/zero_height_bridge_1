@@ -47,8 +47,8 @@ function data()
                         edgeTypeName = params.bridge .. ".lua",
                         alignTerrain = false,
                         params = {
-                            type = ({"high_speed.lua", "standard.lua"})[e.trackType],
-                            catenary = e.catenary,
+                            type = e.track.trackType,
+                            catenary = e.track.catenary,
                         },
                         edges = e.edge,
                         snapNodes = e.snap0 and e.snap1 and {0, 1} or e.snap0 and {0} or e.snap1 and {1} or {},
@@ -60,8 +60,9 @@ function data()
                         edgeTypeName = params.bridge .. ".lua",
                         alignTerrain = false,
                         params = {
-                            type = e.street,
-                            tramTrackType = e.tram and "ELECTRIC" or "NO",
+                            type = e.street.streetType,
+                            tramTrackType = ({"NO", "YES", "ELECTRIC"})[e.street.tramTrackType + 1],
+                            hasBus = e.street.hasBus
                         },
                         edges = e.edge,
                         snapNodes = e.snap0 and e.snap1 and {0, 1} or e.snap0 and {0} or e.snap1 and {1} or {},
