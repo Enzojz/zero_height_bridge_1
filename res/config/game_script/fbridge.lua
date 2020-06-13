@@ -22,7 +22,7 @@ local showWindow = function()
     state.windows.window = gui.window_create("fbridge.window", _("TITLE"), vLayout)
     
     local bridgeLabel = gui.textView_create("fbridge.bridge.text", _("BRIDGE_TYPE"), 200)
-    local bridgeImage = gui.imageView_create("fbridge.bridge.image", "ui/bridges/" .. state.bridgeList[state.bridge] .. ".tga")
+    local bridgeImage = gui.imageView_create("fbridge.bridge.image", api.res.bridgeTypeRep.get(state.bridge - 1).icon)
     local bridgeButton = gui.button_create("fbridge.bridge.btn", bridgeImage)
     local bridgeLayout = gui.boxLayout_create("fbridge.bridge.layout", "HORIZONTAL")
     local bridgeComp = gui.component_create("fbridge.bridge", "a")
@@ -89,7 +89,10 @@ local script = {
             elseif (name == "use") then
                 state.use = not state.use
             elseif (name == "build") then
-                local edges = table.unpack(param)
+                local edges = param.edges
+                if param.bridgeType then
+                    state.bridge = param.bridgeType
+                end
                 for i, edge in ipairs(edges) do
                     game.interface.bulldoze(edge.id)
                 end
@@ -146,7 +149,7 @@ local script = {
             state.windows.window:close()
         end
         if state.windows.window then
-            state.windows.bridge:setImage("ui/bridges/" .. state.bridgeList[state.bridge] .. ".tga")
+            state.windows.bridge:setImage(api.res.bridgeTypeRep.get(state.bridge - 1).icon)
         end
         state.useLabel:setText(state.use and _("ON") or _("OFF"))
     end,
@@ -180,6 +183,7 @@ local script = {
                         table.insert(renewedSegements, seg)
                     end
                 end
+                local bridgeType = false
                 for i = 1, #proposal.addedSegments do
                     local seg = proposal.addedSegments[i]
                     if not (pipe.contains(seg.entity)(renewedSegements)) then
@@ -207,11 +211,12 @@ local script = {
                                 }
                             }
                         }
-                        local edgeType = seg.comp.type + 1
+                        if (seg.comp.type == 1) then
+                            bridgeType = seg.comp.typeIndex + 1
+                        end
                         table.insert(edges, {
                             id = seg.entity,
                             edge = edge,
-                            edgeType = edgeType,
                             snap0 = snap0,
                             snap1 = snap1,
                             track = isTrack and {
@@ -228,7 +233,7 @@ local script = {
                     end
                 end
                 if (#edges > 0) then
-                    game.interface.sendScriptEvent("__fbridge__", "build", { edges })
+                    game.interface.sendScriptEvent("__fbridge__", "build", { edges = edges, bridgeType = bridgeType })
                 end
             end
         end
