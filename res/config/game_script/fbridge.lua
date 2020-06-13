@@ -93,27 +93,44 @@ local script = {
                 if param.bridgeType then
                     state.bridge = param.bridgeType
                 end
+
+                local newProposal = api.type.SimpleProposal.new()
                 for i, edge in ipairs(edges) do
-                    game.interface.bulldoze(edge.id)
+                    
+                    local entity = api.type.SegmentAndEntity.new()
+                    local comp = api.engine.getComponent(edge,  api.type.ComponentType.BASE_EDGE)
+                    local trackEdge = api.engine.getComponent(edge,  api.type.ComponentType.BASE_EDGE_TRACK)
+                    local streetEdge = api.engine.getComponent(edge,  api.type.ComponentType.BASE_EDGE_STREET)
+                    
+                    entity.entity = -edge
+                    entity.playerOwned = { player = api.engine.util.getPlayer() }
+                    
+                    entity.comp.node0 = comp.node0
+                    entity.comp.node1 = comp.node1
+                    for i = 1, 3 do
+                        entity.comp.tangent0[i] = comp.tangent0[i]
+                        entity.comp.tangent1[i] = comp.tangent1[i]
+                    end
+                    entity.comp.type = 1
+                    entity.comp.typeIndex = state.bridge - 1
+                    
+                    if trackEdge ~= nil then
+                        entity.type = 1
+                        entity.trackEdge.trackType = trackEdge.trackType
+                        entity.trackEdge.catenary = trackEdge.catenary
+                    elseif streetEdge ~= nil then
+                        entity.type = 0
+                        entity.streetEdge.streetType = streetEdge.streetType
+                        entity.streetEdge.hasBus = streetEdge.hasBus
+                        entity.streetEdge.tramTrackType = streetEdge.tramTrackType
+                        entity.streetEdge.precedenceNode0 = streetEdge.precedenceNode0
+                        entity.streetEdge.precedenceNode1 = streetEdge.precedenceNode1
+                    end
+                    
+                    newProposal.streetProposal.edgesToAdd[i] = entity
+                    newProposal.streetProposal.edgesToRemove[i] = edge
                 end
-                local id = game.interface.buildConstruction(
-                    "fbridge.con",
-                    {
-                        edges = edges,
-                        bridge = state.bridgeList[state.bridge],
-                    },
-                    {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}
-                )
-                game.interface.upgradeConstruction(
-                    id,
-                    "fbridge.con",
-                    {
-                        edges = edges,
-                        bridge = state.bridgeList[state.bridge],
-                        isFinal = true
-                    }
-                )
-                game.interface.bulldoze(id)
+                api.cmd.sendCommand(api.cmd.make.buildProposal(newProposal, nil), function(_) end)
             end
         end
     end,
@@ -161,22 +178,13 @@ local script = {
             if
             (not toAdd or #toAdd == 0) and
                 (not toRemove or #toRemove == 0) and
-                proposal and proposal.addedSegments and #proposal.addedSegments > 1 and proposal.removedSegments and proposal.addedNodes
+                proposal 
+                and proposal.addedSegments and #proposal.addedSegments > 0 
+                and proposal.removedSegments and proposal.addedNodes
                 and #proposal.removedSegments < #proposal.addedSegments
-                -- and (not proposal.removedSegments or #proposal.removedSegments == 0)
                 and (proposal.edgeObjectsToAdd and proposal.edgeObjectsToRemove and #proposal.edgeObjectsToAdd == #proposal.edgeObjectsToRemove)
             then
-                local nodes = {}
                 local edges = {}
-                for i = 1, #proposal.addedNodes do
-                    local node = proposal.addedNodes[i]
-                    local id = node.entity
-                    nodes[id] = {
-                        node.comp.position[1],
-                        node.comp.position[2],
-                        node.comp.position[3]
-                    }
-                end
                 local renewedSegements = {}
                 for _, v in pairs(proposal.old2newSegments) do
                     for _, seg in ipairs(v) do
@@ -186,50 +194,11 @@ local script = {
                 local bridgeType = false
                 for i = 1, #proposal.addedSegments do
                     local seg = proposal.addedSegments[i]
-                    if not (pipe.contains(seg.entity)(renewedSegements)) then
-                        local isTrack = seg.type == 1
-                        local node0 = nodes[seg.comp.node0]
-                        local node1 = nodes[seg.comp.node1]
-                        local snap0 = not node0
-                        local snap1 = not node1
-                        
-                        local edge = {
-                            {
-                                node0 or (game.interface.getEntity(seg.comp.node0).position),
-                                {
-                                    seg.comp.tangent0[1],
-                                    seg.comp.tangent0[2],
-                                    seg.comp.tangent0[3]
-                                }
-                            },
-                            {
-                                node1 or (game.interface.getEntity(seg.comp.node1).position),
-                                {
-                                    seg.comp.tangent1[1],
-                                    seg.comp.tangent1[2],
-                                    seg.comp.tangent1[3]
-                                }
-                            }
-                        }
+                    if not func.contains(renewedSegements, seg.entity) then
                         if (seg.comp.type == 1) then
                             bridgeType = seg.comp.typeIndex + 1
                         end
-                        table.insert(edges, {
-                            id = seg.entity,
-                            edge = edge,
-                            snap0 = snap0,
-                            snap1 = snap1,
-                            track = isTrack and {
-                                trackType = api.res.trackTypeRep.getFileName(seg.trackEdge.trackType):match("([^/]+.lua)"),
-                                catenary = seg.trackEdge.catenary
-                            } or false,
-                            street = (not isTrack) and {
-                                streetType = api.res.streetTypeRep.getFileName(seg.streetEdge.streetType):match("res/config/street/(.+.lua)"),
-                                hasBus = seg.streetEdge.hasBus,
-                                tramTrackType = seg.streetEdge.tramTrackType,
-                            } or false,
-                            isTrack = isTrack
-                        })
+                        table.insert(edges, seg.entity)
                     end
                 end
                 if (#edges > 0) then
