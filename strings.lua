@@ -11,7 +11,12 @@ Usage:
 Stay strong and united facing COVID-19!
 
 Changelog:
-1.1 Adaptation to the new API
+1.1
+- Adaptation to the new API
+- Resolved dysfunction when the segment is short
+- Compatibility to all roads and bridges
+- Auto-select of bridge when build with existing ones
+- GUI improvement
 ]]
 
 local descFR = [[Ce mod vous permet de construit les ponts rail ou pont route à n'import où
@@ -27,7 +32,12 @@ Mode d’emploi :
 Restons prudents! #COVID-19
 
 Changelog:
-1.1 Adaptation à l'api nouvelle.
+1.1 
+- Adaptation à l'api nouvelle.
+- Résoulution du dysfonctionnement quand la section crée est court
+- Compatibilité avec tous les routes et ponts
+- Auto-sélectionement des ponts lors la construction avec celui existant
+- Amélioration d'IHM
 ]]
 
 local descCN = [[该模组能够在任意高度放置铁路桥或公路桥
@@ -41,7 +51,13 @@ local descCN = [[该模组能够在任意高度放置铁路桥或公路桥
 * 该模组可以安全地从存档中移除
 
 更新日志:
-1.1 使用了新的API]]
+1.1
+- 使用了新的API
+- 解决了在创建轨道很短的情况下失效的问题
+- 兼容所有的桥梁和道路
+- 在连接既有桥梁时自动选择
+- 改进了用户界面
+]]
 
 local descTC = [[該模組能夠在任意高度放置鐵路橋或公路橋
 
@@ -54,7 +70,12 @@ local descTC = [[該模組能夠在任意高度放置鐵路橋或公路橋
 * 該模組可以安全地從存檔中移除
 
 更新日誌:
-1.1 使用了新的API]]
+1.1
+- 使用了新的API
+- 解決了在創建軌道很短的情況下失效的問題
+- 相容所有的橋樑和道路
+- 在連接既有橋樑時自動選擇
+- 改進了使用者介面]]
 
 function data()
     return {
