@@ -3,7 +3,7 @@
 function data()
     return {
         info = {
-            -- minorVersion = 2,
+            minorVersion = 1,
             severityAdd = "NONE",
             severityRemove = "NONE",
             name = _("MOD_NAME"),
@@ -17,7 +17,7 @@ function data()
                     tfnetId = 27218,
                 }
             },
-            tags = {"Track", "Bridge", "Script Mod"},
+            tags = {"Track", "Bridge", "Street", "Script Mod"},
         }
     }
 end

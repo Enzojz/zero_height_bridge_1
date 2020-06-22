@@ -5,73 +5,79 @@ local func = require "fbridge/func"
 local defBridgeList = {"cement", "iron", "stone"}
 
 local state = {
-    windows = {
-        window = false,
-        bridge = false,
-    },
-    button = false,
+    window = false,
     use = false,
     useLabel = false,
     bridge = 1,
-    showWindow = false,
-    bridgeList = defBridgeList
+    bridgeList = defBridgeList,
+    fn = {}
 }
 
-local showWindow = function()
-    local vLayout = gui.boxLayout_create("fbridge.window.vLayout", "VERTICAL")
-    state.windows.window = gui.window_create("fbridge.window", _("TITLE"), vLayout)
+local createWindow = function()
+    local comp = api.gui.comp.Component.new("")
+    local layout = api.gui.layout.BoxLayout.new("HORIZONTAL")
+    layout:setId("fbridge.layout")
+    comp:setLayout(layout)
+
+    state.window = api.gui.comp.Window.new(_("TITLE"), comp)
+    state.window:setId("fbridge.window")
+
+    local bridgeImage = api.gui.comp.ImageView.new(api.res.bridgeTypeRep.get(state.bridge - 1).icon)
+    bridgeImage:setTooltip(api.res.bridgeTypeRep.get(state.bridge - 1).name)
+
+    local bridgeSlider = api.gui.comp.Slider.new(true)
+    bridgeSlider:setGravity(-1, -1)
+    bridgeSlider:setStep(1)
+    bridgeSlider:setMinimum(1)
+    bridgeSlider:setMaximum(#state.bridgeList)
+    bridgeSlider:setValue(state.bridge, false)
     
-    local bridgeLabel = gui.textView_create("fbridge.bridge.text", _("BRIDGE_TYPE"), 200)
-    local bridgeImage = gui.imageView_create("fbridge.bridge.image", api.res.bridgeTypeRep.get(state.bridge - 1).icon)
-    local bridgeButton = gui.button_create("fbridge.bridge.btn", bridgeImage)
-    local bridgeLayout = gui.boxLayout_create("fbridge.bridge.layout", "HORIZONTAL")
-    local bridgeComp = gui.component_create("fbridge.bridge", "a")
-    bridgeComp:setLayout(bridgeLayout)
-    bridgeLayout:addItem(bridgeLabel)
-    bridgeLayout:addItem(bridgeButton)
-    state.windows.bridge = bridgeImage
-        
-    bridgeButton:onClick(function()game.interface.sendScriptEvent("__fbridge__", "bridge", {}) end)
+    layout:addItem(bridgeImage)
+    layout:addItem(bridgeSlider)
     
-    vLayout:addItem(bridgeComp)
-    
-    local mainView = game.gui.getContentRect("mainView")
-    local mainMenuHeight = game.gui.getContentRect("mainMenuTopBar")[4] + game.gui.getContentRect("mainMenuBottomBar")[4]
-    local buttonX = game.gui.getContentRect("fbridge.button")[1]
-    local size = game.gui.calcMinimumSize(state.windows.window.id)
-    local y = mainView[4] - size[2] - mainMenuHeight
-    
-    state.windows.window:onClose(function()
-        state.windows = {
-            window = false,
-            bridge = false,
-            signal = false,
-            distance = false,
-            side = false
-        }
-        state.showWindow = false
+    bridgeSlider:onValueChanged(function(value)
+        table.insert(state.fn, function() 
+            local b = api.res.bridgeTypeRep.get(value - 1)
+            bridgeImage:setImage(b.icon, true)
+            bridgeImage:setTooltip(b.name)
+            game.interface.sendScriptEvent("__fbridge__", "bridge", {id = value})
+        end)
     end)
-    game.gui.window_setPosition(state.windows.window.id, buttonX, y)
+
+    state.window:onClose(function()state.window:setVisible(false, false) end)
+        
+    local mainView = api.gui.util.getById("mainView"):getContentRect().h
+    local mainMenuHeight = api.gui.util.getById("mainMenuTopBar"):getContentRect().h + api.gui.util.getById("mainMenuBottomBar"):getContentRect().h
+    local x = api.gui.util.getById("fbridge.button"):getContentRect().x
+    local y = mainView - mainMenuHeight - state.window:calcMinimumSize().h
+
+    game.gui.window_setPosition("fbridge.window", x, y)
 end
 
 local createComponents = function()
-    if (not state.button) then
+    if (not state.useLabel) then
         local label = gui.textView_create("fbridge.lable", _("FBRIDGE"))
-        state.button = gui.button_create("fbridge.button", label)
+        local button = gui.button_create("fbridge.button", label)
         
         state.useLabel = gui.textView_create("fbridge.use.text", state.use and _("ON") or _("OFF"))
-        state.use = gui.button_create("fbridge.use", state.useLabel)
+        local use = gui.button_create("fbridge.use", state.useLabel)
         
         game.gui.boxLayout_addItem("gameInfo.layout", gui.component_create("gameInfo.fbridge.sep", "VerticalLine").id)
         game.gui.boxLayout_addItem("gameInfo.layout", "fbridge.button")
         game.gui.boxLayout_addItem("gameInfo.layout", "fbridge.use")
         
-        state.use:onClick(function()
-            if state.use then state.showWindow = false end
+        use:onClick(function()
             game.interface.sendScriptEvent("__fbridge__", "use", {})
-            game.interface.sendScriptEvent("__edgeTool__", "off", { sender = "fbridge" })
+            game.interface.sendScriptEvent("__edgeTool__", "off", {sender = "fbridge"})
         end)
-        state.button:onClick(function()state.showWindow = not state.showWindow end)
+        
+        button:onClick(function()
+            if state.window and state.use then
+                state.window:setVisible(not state.window:isVisible(), false)
+            elseif not state.window and state.use then
+                table.insert(state.fn, createWindow)
+            end
+        end)
     end
 end
 
@@ -83,7 +89,7 @@ local script = {
             end
         elseif (id == "__fbridge__") then
             if (name == "bridge") then
-                state.bridge = state.bridge < #state.bridgeList and state.bridge + 1 or 1
+                state.bridge = param.id
             elseif (name == "init") then
                 state = func.with(state, param)
             elseif (name == "use") then
@@ -93,17 +99,17 @@ local script = {
                 if param.bridgeType then
                     state.bridge = param.bridgeType
                 end
-
+                
                 local newProposal = api.type.SimpleProposal.new()
                 for i, edge in ipairs(edges) do
                     
                     local entity = api.type.SegmentAndEntity.new()
-                    local comp = api.engine.getComponent(edge,  api.type.ComponentType.BASE_EDGE)
-                    local trackEdge = api.engine.getComponent(edge,  api.type.ComponentType.BASE_EDGE_TRACK)
-                    local streetEdge = api.engine.getComponent(edge,  api.type.ComponentType.BASE_EDGE_STREET)
+                    local comp = api.engine.getComponent(edge, api.type.ComponentType.BASE_EDGE)
+                    local trackEdge = api.engine.getComponent(edge, api.type.ComponentType.BASE_EDGE_TRACK)
+                    local streetEdge = api.engine.getComponent(edge, api.type.ComponentType.BASE_EDGE_STREET)
                     
                     entity.entity = -edge
-                    entity.playerOwned = { player = api.engine.util.getPlayer() }
+                    entity.playerOwned = {player = api.engine.util.getPlayer()}
                     
                     entity.comp.node0 = comp.node0
                     entity.comp.node1 = comp.node1
@@ -130,14 +136,14 @@ local script = {
                     newProposal.streetProposal.edgesToAdd[i] = entity
                     newProposal.streetProposal.edgesToRemove[i] = edge
                 end
-                api.cmd.sendCommand(api.cmd.make.buildProposal(newProposal, nil), function(_) end)
+                api.cmd.sendCommand(api.cmd.make.buildProposal(newProposal, nil, false), function(_) end)
             end
         end
     end,
-    save = function() 
+    save = function()
         if (not state.bridgeList) then state.signalList = defBridgeList end
         if (#state.bridgeList == 0) then state.bridgeList = defBridgeList end
-        return state 
+        return state
     end,
     load = function(data)
         if data then
@@ -156,18 +162,23 @@ local script = {
                 table.insert(bridgeList, bridgeName:match("(.+).lua"))
             end
         end
-        game.interface.sendScriptEvent("__fbridge__", "init", { bridgeList = bridgeList })
+        game.interface.sendScriptEvent("__fbridge__", "init", {bridgeList = bridgeList})
     end,
     guiUpdate = function()
         createComponents()
-        if (state.showWindow and not state.windows.window) then
-            showWindow()
-        elseif (not state.showWindow and state.windows.window) then
-            state.windows.window:close()
+        
+        if not state.use and state.window and state.window:isVisible() then
+            state.window:close()
         end
-        if state.windows.window then
-            state.windows.bridge:setImage(api.res.bridgeTypeRep.get(state.bridge - 1).icon)
-        end
+        
+        for _, fn in ipairs(state.fn) do fn() end
+        state.fn = {}
+        
+        state.useLabel:setText(state.use and _("ON") or _("OFF"))
+
+        -- if state.window and state.bridgeButton then
+        --     state.bridgeButton:setImage(api.res.bridgeTypeRep.get(state.bridge - 1).icon, false)
+        -- end
         state.useLabel:setText(state.use and _("ON") or _("OFF"))
     end,
     guiHandleEvent = function(id, name, param)
@@ -175,11 +186,10 @@ local script = {
             local proposal = param and param.proposal and param.proposal.proposal
             local toRemove = param.proposal.toRemove
             local toAdd = param.proposal.toAdd
-            if
-            (not toAdd or #toAdd == 0) and
-                (not toRemove or #toRemove == 0) and
-                proposal 
-                and proposal.addedSegments and #proposal.addedSegments > 0 
+            if (not toAdd or #toAdd == 0)
+                and (not toRemove or #toRemove == 0)
+                and proposal
+                and proposal.addedSegments and #proposal.addedSegments > 0
                 and proposal.removedSegments and proposal.addedNodes
                 and #proposal.removedSegments < #proposal.addedSegments
                 and (proposal.edgeObjectsToAdd and proposal.edgeObjectsToRemove and #proposal.edgeObjectsToAdd == #proposal.edgeObjectsToRemove)
@@ -202,7 +212,7 @@ local script = {
                     end
                 end
                 if (#edges > 0) then
-                    game.interface.sendScriptEvent("__fbridge__", "build", { edges = edges, bridgeType = bridgeType })
+                    game.interface.sendScriptEvent("__fbridge__", "build", {edges = edges, bridgeType = bridgeType})
                 end
             end
         end
