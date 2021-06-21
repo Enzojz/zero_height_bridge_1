@@ -1,46 +1,46 @@
--- local dump = require "luadump"
 local pipe = require "fbridge/pipe"
 local func = require "fbridge/func"
-
-local defBridgeList = {"cement", "iron", "stone"}
 
 local state = {
     window = false,
     use = false,
     useLabel = false,
     bridge = 1,
-    bridgeList = defBridgeList,
     fn = {}
 }
 
 local createWindow = function()
-    local comp = api.gui.comp.Component.new("")
-    local layout = api.gui.layout.BoxLayout.new("HORIZONTAL")
-    layout:setId("fbridge.layout")
-    comp:setLayout(layout)
+    local list = api.gui.comp.List.new(true, api.gui.util.Orientation.VERTICAL, true)
 
-    state.window = api.gui.comp.Window.new(_("TITLE"), comp)
+    state.window = api.gui.comp.Window.new(_("TITLE"), list)
     state.window:setId("fbridge.window")
 
-    local bridgeImage = api.gui.comp.ImageView.new(api.res.bridgeTypeRep.get(state.bridge - 1).icon)
-    bridgeImage:setTooltip(api.res.bridgeTypeRep.get(state.bridge - 1).name)
+    list:setId("fbridge.list")
+    list:setVerticalScrollBarPolicy(api.gui.comp.ScrollBarPolicy.ALWAYS_ON)
+    list:setHorizontalScrollBarPolicy(api.gui.comp.ScrollBarPolicy.ALWAYS_OFF)
 
-    local bridgeSlider = api.gui.comp.Slider.new(true)
-    bridgeSlider:setGravity(-1, -1)
-    bridgeSlider:setStep(1)
-    bridgeSlider:setMinimum(1)
-    bridgeSlider:setMaximum(#state.bridgeList)
-    bridgeSlider:setValue(state.bridge, false)
-    
-    layout:addItem(bridgeImage)
-    layout:addItem(bridgeSlider)
-    
-    bridgeSlider:onValueChanged(function(value)
-        table.insert(state.fn, function() 
-            local b = api.res.bridgeTypeRep.get(value - 1)
-            bridgeImage:setImage(b.icon, true)
-            bridgeImage:setTooltip(b.name)
-            game.interface.sendScriptEvent("__fbridge__", "bridge", {id = value})
+    for index, name in pairs(api.res.bridgeTypeRep.getAll()) do
+        local b = api.res.bridgeTypeRep.get(index)
+        local view = api.gui.comp.ImageView.new(b.icon)
+        view:setTooltip(b.name)
+        view:setName(name)
+        list:addItem(view)
+        if (state.bridge == index) then
+            list:select(list:getNumItems() - 1, false)
+        end
+    end
+
+    local mSize = list:calcMinimumSize()
+    local listSize = api.gui.util.Size.new()
+    listSize.w = mSize.w
+    listSize.h = 200
+    list:setMaximumSize(listSize)
+
+    list:onSelect(function(value)
+        local comp = list:getItem(value)
+        local id = api.res.bridgeTypeRep.find(comp:getName())
+        table.insert(state.fn, function ()
+            game.interface.sendScriptEvent("__fbridge__", "bridge", {id = id})
         end)
     end)
 
@@ -91,7 +91,10 @@ local script = {
             if (name == "bridge") then
                 state.bridge = param.id
             elseif (name == "init") then
-                state = func.with(state, param)
+                local bridgeList = api.res.bridgeTypeRep.getAll()
+                if ((not state.bridge) or (not bridgeList[state.bridge])) then
+                    state.bridge = api.res.bridgeTypeRep.find("stone.lua")
+                end
             elseif (name == "use") then
                 state.use = not state.use
             elseif (name == "build") then
@@ -118,7 +121,7 @@ local script = {
                         entity.comp.tangent1[i] = comp.tangent1[i]
                     end
                     entity.comp.type = 1
-                    entity.comp.typeIndex = state.bridge - 1
+                    entity.comp.typeIndex = state.bridge
                     
                     if trackEdge ~= nil then
                         entity.type = 1
@@ -141,28 +144,16 @@ local script = {
         end
     end,
     save = function()
-        if (not state.bridgeList) then state.signalList = defBridgeList end
-        if (#state.bridgeList == 0) then state.bridgeList = defBridgeList end
         return state
     end,
     load = function(data)
         if data then
-            if (not data.bridgeList) then data.bridgeList = defBridgeList end
-            if (#data.bridgeList == 0) then data.bridgeList = defBridgeList end
-            state.bridge = data.bridge <= #data.bridgeList and data.bridge or 1
+            state.bridge = data.bridge
             state.use = data.use
-            state.bridgeList = data.bridgeList
         end
     end,
     guiInit = function()
-        local bridgeList = {}
-        for _, bridgeName in pairs(api.res.bridgeTypeRep.getAll()) do
-            local index = api.res.bridgeTypeRep.find(bridgeName)
-            if (api.res.bridgeTypeRep.isVisible(index)) then
-                table.insert(bridgeList, bridgeName:match("(.+).lua"))
-            end
-        end
-        game.interface.sendScriptEvent("__fbridge__", "init", {bridgeList = bridgeList})
+        game.interface.sendScriptEvent("__fbridge__", "init", {})
     end,
     guiUpdate = function()
         createComponents()
@@ -173,12 +164,6 @@ local script = {
         
         for _, fn in ipairs(state.fn) do fn() end
         state.fn = {}
-        
-        state.useLabel:setText(state.use and _("ON") or _("OFF"))
-
-        -- if state.window and state.bridgeButton then
-        --     state.bridgeButton:setImage(api.res.bridgeTypeRep.get(state.bridge - 1).icon, false)
-        -- end
         state.useLabel:setText(state.use and _("ON") or _("OFF"))
     end,
     guiHandleEvent = function(id, name, param)
@@ -206,7 +191,7 @@ local script = {
                     local seg = proposal.addedSegments[i]
                     if not func.contains(renewedSegements, seg.entity) then
                         if (seg.comp.type == 1) then
-                            bridgeType = seg.comp.typeIndex + 1
+                            bridgeType = seg.comp.typeIndex
                         end
                         table.insert(edges, seg.entity)
                     end

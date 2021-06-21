@@ -8,9 +8,9 @@ Usage:
 
 * This mod can be safely removed from gamesaves.
 
-Stay strong and united facing COVID-19!
-
 Changelog:
+1.2
+- New GUI
 1.1
 - Adaptation to the new API
 - Resolved dysfunction when the segment is short
@@ -29,9 +29,9 @@ Mode d’emploi :
 
 * Ce mod pourrait être désactivé sans souci.
 
-Restons prudents! #COVID-19
-
 Changelog:
+1.2
+- Nouvelle IHM
 1.1 
 - Adaptation à l'api nouvelle.
 - Résoulution du dysfonctionnement quand la section crée est court
@@ -51,6 +51,8 @@ local descCN = [[该模组能够在任意高度放置铁路桥或公路桥
 * 该模组可以安全地从存档中移除
 
 更新日志:
+1.2
+- 重新设计了界面
 1.1
 - 使用了新的API
 - 解决了在创建轨道很短的情况下失效的问题
@@ -70,6 +72,8 @@ local descTC = [[該模組能夠在任意高度放置鐵路橋或公路橋
 * 該模組可以安全地從存檔中移除
 
 更新日誌:
+1.2
+- 重新設計了介面
 1.1
 - 使用了新的API
 - 解決了在創建軌道很短的情況下失效的問題
@@ -82,7 +86,7 @@ function data()
         en = {
             MOD_NAME = "Zero Height Bridge",
             MOD_DESC = descEN,
-            TITLE = "Bridge Type",
+            TITLE = "",
             FBRIDGE = "H0 Bridge",
             ON = "On",
             OFF = "Off"
@@ -90,7 +94,7 @@ function data()
         fr = {
             MOD_NAME = "Pont à hauteur zéro",
             MOD_DESC = descFR,
-            TITLE = "Type du pont",
+            TITLE = "",
             FBRIDGE = "Pont H0",
             ON = "Activé",
             OFF = "Désactivé"
@@ -98,7 +102,7 @@ function data()
         zh_CN = {
             MOD_NAME = "零高度桥梁",
             MOD_DESC = descCN,
-            TITLE = "桥梁类型",
+            TITLE = "",
             FBRIDGE = "零高度桥梁",
             ON = "开启",
             OFF = "关闭"
@@ -106,7 +110,7 @@ function data()
         zh_TW = {
             MOD_NAME = "零高度橋樑",
             MOD_DESC = descTC,
-            TITLE = "橋樑類型",
+            TITLE = "",
             FBRIDGE = "零高度橋樑",
             ON = "開啟",
             OFF = "關閉"
