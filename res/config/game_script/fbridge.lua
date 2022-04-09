@@ -37,11 +37,14 @@ local createWindow = function()
     list:setMaximumSize(listSize)
 
     list:onSelect(function(value)
-        local comp = list:getItem(value)
-        local id = api.res.bridgeTypeRep.find(comp:getName())
-        table.insert(state.fn, function ()
-            game.interface.sendScriptEvent("__fbridge__", "bridge", {id = id})
-        end)
+        local listBridge = api.res.bridgeTypeRep.getAll()
+        local name = listBridge[value]
+        if name then
+            local id = api.res.bridgeTypeRep.find(name)
+            table.insert(state.fn, function()
+                game.interface.sendScriptEvent("__fbridge__", "bridge", {id = id})
+            end)
+        end
     end)
 
     state.window:onClose(function()state.window:setVisible(false, false) end)
